@@ -14,10 +14,10 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
@@ -29,10 +29,26 @@ jobs:
     - name: Run tests
       run: |
         pytest
+      env:
+        FLASK_ENV: testing
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
     - name: Build Docker image
       run: |
-        docker build -t my-flask-app .
+        docker --version # Check Docker is installed
+        docker build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache -t my-flask-app .
+      env:
+        DOCKER_BUILDKIT: 1
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
